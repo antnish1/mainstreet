@@ -7,10 +7,10 @@ export const KEYS = {
 };
 
 export const CATEGORY_ICONS = {
-  Starters: "🥟", "Fried Rice": "🍚", Noodles: "🍜", Pasta: "🍝",
-  Burgers: "🍔", Sandwiches: "🥪", "Snacks/Fries": "🍟", Maggi: "🍲",
-  Momos: "🥟", Water: "💧", Cigarette: "▥", Biscuits: "🍪", Tea: "☕",
-  "Cold Coffee": "🥤", Torando: "🌪️", Mojito: "🍹", Custom: "✦",
+  Starters: "starters", "Fried Rice": "fried-rice", Noodles: "noodles", Pasta: "pasta",
+  Burgers: "burgers", Sandwiches: "sandwiches", "Snacks/Fries": "fries", Maggi: "maggi",
+  Momos: "momos", Water: "water", Cigarette: "cigarette", Biscuits: "biscuits", Tea: "tea",
+  "Cold Coffee": "cold-coffee", Torando: "torando", Mojito: "mojito", Custom: "custom",
 };
 
 function readJson(key, fallback) {
