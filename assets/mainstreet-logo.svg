@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Mainstreet Meals and Coffee logo</title>
+  <desc id="desc">Circular black and white Mainstreet logo with coffee cup, fork and toast.</desc>
+  <circle cx="128" cy="128" r="125" fill="#fff" stroke="#111" stroke-width="6"/>
+  <g fill="#111" stroke="#111" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M48 65h48v22c0 16-10 27-24 27S48 103 48 87V65Z" stroke-width="4"/>
+    <path d="M96 72h8c12 0 16 8 16 15 0 9-7 17-19 17h-8" fill="none" stroke-width="7"/>
+    <path d="M59 54c-7-7 7-12 0-21M73 54c-7-7 7-12 0-21M87 54c-7-7 7-12 0-21" fill="none" stroke-width="4"/>
+    <path d="M128 47v69M120 47v24M136 47v24M144 47v24M120 70h24" fill="none" stroke-width="5"/>
+    <path d="M158 52c0-11 11-18 25-18h15c14 0 25 7 25 18v55c0 6-5 11-11 11h-43c-6 0-11-5-11-11V52Z" fill="none" stroke-width="6"/>
+    <circle cx="176" cy="72" r="3" stroke="none"/><circle cx="199" cy="66" r="3" stroke="none"/>
+    <circle cx="186" cy="88" r="3" stroke="none"/><circle cx="204" cy="99" r="3" stroke="none"/>
+  </g>
+  <text x="33" y="145" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="#111">MMC</text>
+  <line x1="96" y1="136" x2="224" y2="136" stroke="#111" stroke-width="5"/>
+  <text x="25" y="180" font-family="Arial, sans-serif" font-size="31" font-weight="900" fill="#111">MAINSTREET</text>
+  <text x="49" y="208" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#111">MEALS &amp; COFFEE</text>
+  <line x1="45" y1="220" x2="214" y2="220" stroke="#111" stroke-width="3"/>
+</svg>
