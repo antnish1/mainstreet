@@ -6,11 +6,15 @@ export const KEYS = {
   customers: "mainstreet.customer-cache.v2",
 };
 
+const categoryIcon = (id) => `<svg aria-hidden="true"><use href="./assets/category-icons.svg#${id}"></use></svg>`;
+
 export const CATEGORY_ICONS = {
-  Starters: "starters", "Fried Rice": "fried-rice", Noodles: "noodles", Pasta: "pasta",
-  Burgers: "burgers", Sandwiches: "sandwiches", "Snacks/Fries": "fries", Maggi: "maggi",
-  Momos: "momos", Water: "water", Cigarette: "cigarette", Biscuits: "biscuits", Tea: "tea",
-  "Cold Coffee": "cold-coffee", Torando: "torando", Mojito: "mojito", Custom: "custom",
+  Starters: categoryIcon("starters"), "Fried Rice": categoryIcon("fried-rice"),
+  Noodles: categoryIcon("noodles"), Pasta: categoryIcon("pasta"), Burgers: categoryIcon("burgers"),
+  Sandwiches: categoryIcon("sandwiches"), "Snacks/Fries": categoryIcon("fries"), Maggi: categoryIcon("maggi"),
+  Momos: categoryIcon("momos"), Water: categoryIcon("water"), Cigarette: categoryIcon("cigarette"),
+  Biscuits: categoryIcon("biscuits"), Tea: categoryIcon("tea"), "Cold Coffee": categoryIcon("cold-coffee"),
+  Torando: categoryIcon("torando"), Mojito: categoryIcon("mojito"), Custom: categoryIcon("custom"),
 };
 
 function readJson(key, fallback) {
