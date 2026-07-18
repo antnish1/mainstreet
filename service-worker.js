@@ -1,4 +1,4 @@
-const CACHE_NAME = "mainstreet-business-v2";
+const CACHE_NAME = "mainstreet-business-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./styles-base.css",
   "./styles-invoice.css",
   "./styles-dialogs.css",
+  "./styles-icons.css",
   "./app.js",
   "./app-state.js",
   "./app-utils.js",
@@ -18,6 +19,7 @@ const APP_SHELL = [
   "./supabase-config.js",
   "./manifest.webmanifest",
   "./assets/mainstreet-logo.svg",
+  "./assets/category-icons.svg",
 ];
 
 self.addEventListener("install", (event) => {
