@@ -1,0 +1,17 @@
+.category-picture {
+  background: linear-gradient(145deg, #fff6ed, #f1f1f2);
+  color: var(--accent);
+  font-size: 0;
+}
+
+.category-picture svg {
+  width: 34px;
+  height: 34px;
+}
+
+@media (max-width: 390px) {
+  .category-picture svg {
+    width: 29px;
+    height: 29px;
+  }
+}
