@@ -12,7 +12,7 @@ create or replace function public.assert_staff_session(p_token uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   delete from public.staff_sessions where expires_at <= now();
@@ -31,12 +31,12 @@ create or replace function public.staff_login(p_pin text)
 returns table(token uuid, expires_at timestamptz)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   if p_pin is null or not exists (
     select 1 from public.app_settings a
-    where a.id = 1 and a.pin_hash = crypt(p_pin, a.pin_hash)
+    where a.id = 1 and a.pin_hash = extensions.crypt(p_pin, a.pin_hash)
   ) then
     raise exception 'Invalid PIN' using errcode = '28000';
   end if;
@@ -58,7 +58,7 @@ create or replace function public.change_staff_pin(
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   perform public.assert_staff_session(p_token);
@@ -67,13 +67,13 @@ begin
   end if;
   if not exists (
     select 1 from public.app_settings a
-    where a.id = 1 and a.pin_hash = crypt(p_current_pin, a.pin_hash)
+    where a.id = 1 and a.pin_hash = extensions.crypt(p_current_pin, a.pin_hash)
   ) then
     raise exception 'Current PIN is incorrect' using errcode = '28000';
   end if;
 
   update public.app_settings
-  set pin_hash = crypt(p_new_pin, gen_salt('bf')), updated_at = now()
+  set pin_hash = extensions.crypt(p_new_pin, extensions.gen_salt('bf')), updated_at = now()
   where id = 1;
 
   delete from public.staff_sessions where token <> p_token;
@@ -88,7 +88,7 @@ returns numeric
 language sql
 stable
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   select round(
     coalesce((select sum(i.total_amount) from public.invoices i where i.customer_id = p_customer_id), 0)
@@ -103,7 +103,7 @@ create or replace function public.search_customers(p_token uuid, p_query text de
 returns table(id uuid, name text, balance numeric)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   perform public.assert_staff_session(p_token);
@@ -125,7 +125,7 @@ create or replace function public.get_customer_balance(p_token uuid, p_customer_
 returns numeric
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_customer_id uuid;
@@ -141,3 +141,5 @@ end;
 $$;
 
 grant execute on function public.get_customer_balance(uuid, text) to anon, authenticated;
+
+notify pgrst, 'reload schema';

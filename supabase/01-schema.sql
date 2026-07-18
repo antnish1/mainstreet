@@ -2,7 +2,8 @@
 -- Run first in Supabase Dashboard > SQL Editor.
 -- Initial staff PIN: 2580. Change it immediately from Report > Business security.
 
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 create table if not exists public.app_settings (
   id smallint primary key default 1 check (id = 1),
@@ -12,7 +13,7 @@ create table if not exists public.app_settings (
 );
 
 insert into public.app_settings (id, pin_hash)
-values (1, crypt('2580', gen_salt('bf')))
+values (1, extensions.crypt('2580', extensions.gen_salt('bf')))
 on conflict (id) do nothing;
 
 create table if not exists public.staff_sessions (
