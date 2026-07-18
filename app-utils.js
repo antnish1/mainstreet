@@ -23,7 +23,7 @@ export function updateCloudFromError(error) {
 export function friendlyError(error, fallback) {
   if (!error) return fallback;
   if (["PGRST202", "42883", "42P01"].includes(error.code)) {
-    return "Supabase tables are not installed yet. Run supabase/schema.sql in the Supabase SQL Editor.";
+    return "Supabase setup is incomplete. In the SQL Editor, run 01-schema.sql, 02-seed-menu.sql, 03-auth-functions.sql and 04-transaction-functions.sql in order.";
   }
   if (error.code === "NETWORK") return "No internet connection.";
   if (/invalid pin/i.test(error.message || "")) return "Incorrect business PIN.";
