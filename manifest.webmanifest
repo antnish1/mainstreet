@@ -1,0 +1,19 @@
+{
+  "name": "Mainstreet Meals & Coffee Billing",
+  "short_name": "MMC Billing",
+  "description": "Mobile billing and payment entry for Mainstreet Meals & Coffee.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f1eb",
+  "theme_color": "#171717",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./assets/mainstreet-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
