@@ -1,1 +1,5 @@
-PLACEHOLDER
+@import url('./category-images-1.css');
+@import url('./category-images-2.css');
+@import url('./category-images-3.css');
+@import url('./category-images-4.css');
+.category-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;overflow-x:hidden!important;overflow-y:auto!important;align-content:start!important}.category-card{position:relative!important;min-width:0!important;min-height:140px!important;padding:0!important;overflow:hidden!important;display:flex!important;align-items:flex-end!important;background:#111!important;isolation:isolate}.category-card::before{content:"";position:absolute;inset:0;background:center/cover no-repeat;z-index:-2;transition:transform .22s ease,filter .22s ease}.category-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 20%,rgba(0,0,0,.9));z-index:-1}.category-card:active::before{transform:scale(1.05);filter:brightness(.88)}.category-card .icon,.category-card>strong{display:none!important}.category-card>span:not(.icon){width:100%;padding:12px;display:block!important}.category-card b{font-size:15px!important;color:#fff}.category-card small{display:block!important;color:#ccc!important;font-size:11px!important}
