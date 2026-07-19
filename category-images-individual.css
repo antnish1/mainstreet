@@ -10,20 +10,20 @@
 .category-card>span:nth-child(2){display:block!important;flex:1 1 auto!important;min-height:50px!important;width:100%!important;padding:8px 10px 9px!important;background:linear-gradient(180deg,#1b1e22,#141619)!important}
 .category-card b{display:block!important;color:#f5f6f7!important;font-size:14px!important;font-weight:800!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 .category-card small{display:block!important;margin-top:3px!important;color:#9ba1aa!important;font-size:10px!important}.category-card>strong{display:none!important}
-.category-card:nth-child(1) .icon{background-image:url('./assets/categories/biscuits.webp')!important}
-.category-card:nth-child(2) .icon{background-image:url('./assets/categories/burgers.webp')!important}
-.category-card:nth-child(3) .icon{background-image:url('./assets/categories/cigarette.webp')!important}
-.category-card:nth-child(4) .icon{background-image:url('./assets/categories/cold-coffee.webp')!important}
-.category-card:nth-child(5) .icon{background-image:url('./assets/categories/fried-rice.webp')!important}
-.category-card:nth-child(6) .icon{background-image:url('./assets/categories/maggi.webp')!important}
-.category-card:nth-child(7) .icon{background-image:url('./assets/categories/mojito.webp')!important}
-.category-card:nth-child(8) .icon{background-image:url('./assets/categories/momos.webp')!important}
-.category-card:nth-child(9) .icon{background-image:url('./assets/categories/noodles.webp')!important}
-.category-card:nth-child(10) .icon{background-image:url('./assets/categories/pasta.webp')!important}
-.category-card:nth-child(11) .icon{background-image:url('./assets/categories/sandwiches.webp')!important}
-.category-card:nth-child(12) .icon{background-image:url('./assets/categories/snacks-fries.webp')!important}
-.category-card:nth-child(13) .icon{background-image:url('./assets/categories/starters.webp')!important}
-.category-card:nth-child(14) .icon{background-image:url('./assets/categories/tea.webp')!important}
-.category-card:nth-child(15) .icon{background-image:url('./assets/categories/torando.webp')!important}
-.category-card:nth-child(16) .icon{background-image:url('./assets/categories/water.webp')!important}
+.category-card:nth-child(1) .icon{background-image:url('./assets/categories/biscuits.jpeg')!important}
+.category-card:nth-child(2) .icon{background-image:url('./assets/categories/burgers.jpeg')!important}
+.category-card:nth-child(3) .icon{background-image:url('./assets/categories/cigarette.jpg')!important}
+.category-card:nth-child(4) .icon{background-image:url('./assets/categories/cold-coffee.jpg')!important}
+.category-card:nth-child(5) .icon{background-image:url('./assets/categories/fried-rice.jpeg')!important}
+.category-card:nth-child(6) .icon{background-image:url('./assets/categories/maggi.jpeg')!important}
+.category-card:nth-child(7) .icon{background-image:url('./assets/categories/mojito.jpeg')!important}
+.category-card:nth-child(8) .icon{background-image:url('./assets/categories/momos.jpeg')!important}
+.category-card:nth-child(9) .icon{background-image:url('./assets/categories/noodles.jpeg')!important}
+.category-card:nth-child(10) .icon{background-image:url('./assets/categories/pasta.jpeg')!important}
+.category-card:nth-child(11) .icon{background-image:url('./assets/categories/sandwiches.jpeg')!important}
+.category-card:nth-child(12) .icon{background-image:url('./assets/categories/snacks-fries.jpeg')!important}
+.category-card:nth-child(13) .icon{background-image:url('./assets/categories/starters.jpeg')!important}
+.category-card:nth-child(14) .icon{background-image:url('./assets/categories/tea.jpeg')!important}
+.category-card:nth-child(15) .icon{background-image:url('./assets/categories/torando.jpeg')!important}
+.category-card:nth-child(16) .icon{background-image:url('./assets/categories/water.jpg')!important}
 @media(max-width:360px){.sheet-header h2{font-size:18px!important}.category-grid{gap:8px!important;padding-inline:9px!important}.category-card{height:156px!important;min-height:156px!important}.category-card .icon{flex-basis:108px!important;height:108px!important;min-height:108px!important}}
