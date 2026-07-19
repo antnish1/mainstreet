@@ -1,67 +1,57 @@
-import { el, state } from "./app-state.js";
-import { bindCustomerEvents, showLogin, validateStoredSession } from "./app-customer.js";
-import { bindInvoiceEvents, renderCategoryGrid, renderInvoice, syncMenu } from "./app-invoice.js";
-import { bindReportEvents, loadReport } from "./app-report.js";
-import { bindTransactionEvents, processPendingQueue, updateActionBar } from "./app-transactions.js";
-import { todayLocal, updateCloudState } from "./app-utils.js";
-
-initialize();
-
-async function initialize() {
-  const today = todayLocal();
-  el.transactionDate.value = today;
-  el.reportFrom.value = today;
-  el.reportTo.value = today;
-
-  bindCustomerEvents(openApp);
-  bindInvoiceEvents();
-  bindTransactionEvents();
-  bindReportEvents();
-  bindNavigation();
-  document.addEventListener("mainstreet:statechange", updateActionBar);
-
-  renderInvoice();
-  renderCategoryGrid();
-  updateActionBar();
-  updateCloudState("checking");
-
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    });
-  }
-
-  if (state.sessionToken && await validateStoredSession()) await openApp();
-  else showLogin();
-}
-
-function bindNavigation() {
-  el.tabs.forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
-}
-
-async function openApp() {
-  el.loginScreen.hidden = true;
-  el.appShell.hidden = false;
-  await syncMenu();
-  await processPendingQueue();
-  updateActionBar();
-  window.setTimeout(() => el.customerName.focus(), 100);
-}
-
-function setView(view) {
-  if (!["invoice", "payment", "report"].includes(view)) return;
-  state.view = view;
-  el.tabs.forEach((button) => {
-    const active = button.dataset.view === view;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  el.invoiceView.hidden = view !== "invoice";
-  el.paymentView.hidden = view !== "payment";
-  el.reportView.hidden = view !== "report";
-  el.transactionHeader.hidden = view === "report";
-  el.actionBar.hidden = view === "report";
-  updateActionBar();
-  if (view === "report") loadReport();
-  else window.setTimeout(() => el.customerName.focus(), 80);
-}
+import { MENU_ITEMS } from './menu-data.js';
+import * as api from './supabase-api.js';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const state={view:'invoice',token:null,menu:MENU_ITEMS.map(x=>({...x})),invoice:new Map(),customer:null,report:[],expenses:[],ledger:[],selectedCategory:null};
+const els={login:$('#loginScreen'),app:$('#appShell'),pin:$('#staffPin'),loginForm:$('#loginForm'),loginBtn:$('#loginButton'),loginError:$('#loginError'),logout:$('#logoutButton'),cloud:$('#cloudStatus'),tabs:$$('.tab'),header:$('#transactionHeader'),date:$('#transactionDate'),customer:$('#customerName'),phone:$('#customerPhone'),clearCustomer:$('#clearCustomer'),suggestions:$('#customerSuggestions'),invoiceView:$('#invoiceView'),paymentView:$('#paymentView'),reportView:$('#reportView'),openMenu:$('#openMenu'),clearInvoice:$('#clearInvoice'),emptyInvoice:$('#emptyInvoice'),invoiceItems:$('#invoiceItems'),paymentAmount:$('#paymentAmount'),paymentNote:$('#paymentNote'),paymentBalance:$('#paymentBalance'),actionBar:$('#actionBar'),actionLabel:$('#actionLabel'),actionTotal:$('#actionTotal'),submit:$('#submitTransaction'),menuDialog:$('#menuDialog'),menuTitle:$('#menuDialogTitle'),menuBack:$('#menuBack'),menuSearch:$('#menuSearch'),clearMenuSearch:$('#clearMenuSearch'),categoryGrid:$('#categoryGrid'),menuList:$('#menuItemList'),selectedCount:$('#selectedItemCount'),menuTotal:$('#menuRunningTotal'),addCategory:$('#addCategory'),categoryDialog:$('#categoryDialog'),categoryForm:$('#categoryForm'),reportFrom:$('#reportFrom'),reportTo:$('#reportTo'),reportList:$('#reportList'),reportEmpty:$('#reportEmpty'),reportSales:$('#reportSales'),reportPayments:$('#reportPayments'),reportExpenses:$('#reportExpenses'),reportNet:$('#reportNet'),ledgerDialog:$('#ledgerDialog'),expenseDialog:$('#expenseDialog'),editDialog:$('#editDialog'),success:$('#successDialog'),toast:$('#toastRegion')};
+const key='mainstreet.staff-session.v3';
+init();
+function today(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+function money(n){return `₹${Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2})}`}
+function clean(v){return String(v||'').trim().replace(/\s+/g,' ')}
+function uuid(){return crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`}
+function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;els.toast.append(d);setTimeout(()=>d.remove(),3200)}
+function busy(btn,on,text){if(!btn)return;btn.disabled=on;if(text)btn.textContent=text}
+async function init(){const t=today();els.date.value=t;els.reportFrom.value=t;els.reportTo.value=t;$('#ledgerFrom').value=t;$('#ledgerTo').value=t;$('#expenseDate').value=t;bind();renderInvoice();renderCategories();updateBar();const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved?.token){state.token=saved.token;await openApp()}else showLogin()}
+function bind(){els.loginForm.addEventListener('submit',login);els.logout.addEventListener('click',logout);els.tabs.forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));els.customer.addEventListener('input',customerInput);els.clearCustomer.addEventListener('click',()=>{els.customer.value='';els.phone.value='';state.customer=null;els.suggestions.hidden=true;updateBar()});els.openMenu.addEventListener('click',openMenu);$('#closeMenu').addEventListener('click',()=>els.menuDialog.close());$('#doneMenu').addEventListener('click',()=>els.menuDialog.close());els.menuBack.addEventListener('click',showCategories);els.menuSearch.addEventListener('input',searchMenu);els.clearMenuSearch.addEventListener('click',()=>{els.menuSearch.value='';els.clearMenuSearch.hidden=true;showCategories()});els.clearInvoice.addEventListener('click',()=>{state.invoice.clear();renderInvoice()});els.submit.addEventListener('click',submitTransaction);els.paymentAmount.addEventListener('input',updateBar);els.addCategory.addEventListener('click',()=>els.categoryDialog.showModal());els.categoryForm.addEventListener('submit',saveCategory);$$('[data-close]').forEach(b=>b.addEventListener('click',()=>$('#'+b.dataset.close).close()));$('#refreshReport').addEventListener('click',loadReport);$('#exportExcel').addEventListener('click',exportExcel);$('#openLedger').addEventListener('click',()=>els.ledgerDialog.showModal());$('#openExpense').addEventListener('click',openExpenses);$('#generateLedger').addEventListener('click',generateLedger);$('#ledgerPdf').addEventListener('click',exportLedgerPdf);$('#ledgerJpg').addEventListener('click',exportLedgerJpg);$('#ledgerShare').addEventListener('click',shareLedger);$('#expenseForm').addEventListener('submit',saveExpense);$('#editForm').addEventListener('submit',saveEdit);$('#deleteTransaction').addEventListener('click',removeTransaction);$('#newTransaction').addEventListener('click',resetAfterSave);window.addEventListener('online',()=>setCloud(true))}
+async function login(e){e.preventDefault();busy(els.loginBtn,true,'Checking…');els.loginError.hidden=true;try{const r=await api.staffLogin(els.pin.value.trim());const s=Array.isArray(r)?r[0]:r;if(!s?.token)throw Error('PIN not accepted');state.token=s.token;localStorage.setItem(key,JSON.stringify(s));await openApp()}catch(err){els.loginError.textContent=friendly(err);els.loginError.hidden=false}finally{busy(els.loginBtn,false,'Open app')}}
+async function openApp(){els.login.hidden=true;els.app.hidden=false;setCloud(true);try{const rows=await api.getMenuItems();if(rows?.length)state.menu=rows.map(r=>({id:r.id,category:r.category,name:r.name,halfRate:r.half_rate==null?null:Number(r.half_rate),fullRate:Number(r.full_rate)}));renderCategories()}catch(e){setCloud(false);toast(friendly(e))}}
+function showLogin(){els.app.hidden=true;els.login.hidden=false;setTimeout(()=>els.pin.focus(),80)}
+function logout(){state.token=null;localStorage.removeItem(key);showLogin()}
+function setCloud(ok){els.cloud.querySelector('span').textContent=ok?'Cloud':'Offline';els.cloud.querySelector('i').style.background=ok?'var(--ok)':'var(--danger)'}
+function setView(v){state.view=v;els.tabs.forEach(b=>b.classList.toggle('active',b.dataset.view===v));els.invoiceView.hidden=v!=='invoice';els.paymentView.hidden=v!=='payment';els.reportView.hidden=v!=='report';els.header.hidden=v==='report';els.actionBar.hidden=v==='report';if(v==='report')loadReport();updateBar()}
+let customerTimer;function customerInput(){els.clearCustomer.hidden=!els.customer.value;state.customer=null;clearTimeout(customerTimer);if(clean(els.customer.value).length<2){els.suggestions.hidden=true;return updateBar()}customerTimer=setTimeout(async()=>{try{const rows=await api.searchCustomers(state.token,clean(els.customer.value));els.suggestions.innerHTML='';(rows||[]).forEach(c=>{const b=document.createElement('button');b.type='button';b.innerHTML=`<b>${escapeHtml(c.name)}</b><small>${money(c.balance)}</small>`;b.onclick=()=>{state.customer=c;els.customer.value=c.name;els.phone.value=c.phone||'';els.suggestions.hidden=true;els.paymentBalance.innerHTML=`Current balance <b>${money(c.balance)}</b>`;els.paymentBalance.hidden=false;updateBar()};els.suggestions.append(b)});els.suggestions.hidden=!rows?.length}catch(e){toast(friendly(e))}},220);updateBar()}
+function openMenu(){els.menuSearch.value='';els.clearMenuSearch.hidden=true;showCategories();els.menuDialog.showModal();requestAnimationFrame(()=>els.menuSearch.blur())}
+function iconFor(c){const map={'Starters':'🥟','Fried Rice':'🍚','Noodles':'🍜','Pasta':'🍝','Burgers':'🍔','Sandwiches':'🥪','Snacks/Fries':'🍟','Maggi':'🍲','Momos':'🥟','Water':'💧','Cigarette':'▥','Biscuits':'🍪','Tea':'☕','Cold Coffee':'🥤','Torando':'🌪','Mojito':'🍹'};return map[c]||'✦'}
+function renderCategories(){if(!els.categoryGrid)return;const cats=[...new Set(state.menu.map(x=>x.category))].sort();els.categoryGrid.innerHTML='';cats.forEach(c=>{const count=state.menu.filter(x=>x.category===c).length;const b=document.createElement('button');b.className='category-card';b.type='button';b.innerHTML=`<span class="icon">${iconFor(c)}</span><span><b>${escapeHtml(c)}</b><small>${count} item${count===1?'':'s'}</small></span><strong>›</strong>`;b.onclick=()=>showCategory(c);els.categoryGrid.append(b)})}
+function showCategories(){state.selectedCategory=null;els.menuTitle.textContent='Choose category';els.menuBack.hidden=true;els.categoryGrid.hidden=false;els.menuList.hidden=true;renderCategories();updateMenuFooter()}
+function showCategory(c){state.selectedCategory=c;els.menuTitle.textContent=c;els.menuBack.hidden=false;els.categoryGrid.hidden=true;els.menuList.hidden=false;renderMenuItems(state.menu.filter(x=>x.category===c))}
+function searchMenu(){const q=clean(els.menuSearch.value).toLowerCase();els.clearMenuSearch.hidden=!q;if(!q)return showCategories();state.selectedCategory=null;els.menuTitle.textContent='Search results';els.menuBack.hidden=false;els.categoryGrid.hidden=true;els.menuList.hidden=false;renderMenuItems(state.menu.filter(x=>(x.name+' '+x.category).toLowerCase().includes(q)))}
+function renderMenuItems(items){els.menuList.innerHTML='';items.forEach(item=>{const current=state.invoice.get(item.id);const row=document.createElement('div');row.className='menu-item';const prices=item.halfRate!=null?`H ${money(item.halfRate)} · F ${money(item.fullRate)}`:`Full ${money(item.fullRate)}`;row.innerHTML=`<div><b>${escapeHtml(item.name)}</b><small>${prices}</small></div><div class="menu-item-actions"><button class="minus">−</button>${item.halfRate!=null?'<button class="half">H</button>':''}<button class="full">F</button><button class="remove">×</button></div>`;row.querySelector('.minus').onclick=()=>decrementItem(item);row.querySelector('.half')?.addEventListener('click',()=>incrementItem(item,'half'));row.querySelector('.full').onclick=()=>incrementItem(item,'full');row.querySelector('.remove').onclick=()=>{state.invoice.delete(item.id);renderMenuItems(items);renderInvoice()};if(current)row.style.background='rgba(255,122,26,.06)';els.menuList.append(row)});updateMenuFooter()}
+function incrementItem(item,type){let x=state.invoice.get(item.id)||{...item,halfQty:0,fullQty:0,amount:0,history:[]};x[type+'Qty']++;x.history.push(type);x.amount=calcAmount(x);state.invoice.set(item.id,x);renderInvoice();if(state.selectedCategory)showCategory(state.selectedCategory);else searchMenu()}
+function decrementItem(item){const x=state.invoice.get(item.id);if(!x)return;if(x.history?.length){const t=x.history.pop();x[t+'Qty']=Math.max(0,x[t+'Qty']-1)}else if(x.fullQty)x.fullQty--;else if(x.halfQty)x.halfQty--;if(!x.fullQty&&!x.halfQty)state.invoice.delete(item.id);else{x.amount=calcAmount(x);state.invoice.set(item.id,x)}renderInvoice();if(state.selectedCategory)showCategory(state.selectedCategory);else searchMenu()}
+function calcAmount(x){return Number(((x.halfRate||0)*x.halfQty+x.fullRate*x.fullQty).toFixed(2))}
+function total(){return [...state.invoice.values()].reduce((s,x)=>s+Number(x.amount||0),0)}
+function renderInvoice(){els.invoiceItems.innerHTML='';els.emptyInvoice.hidden=state.invoice.size>0;state.invoice.forEach(x=>{const frag=$('#invoiceRowTemplate').content.cloneNode(true);const row=frag.querySelector('.invoice-row');row.querySelector('.item-name').textContent=x.name;row.querySelector('.item-meta').textContent=x.halfRate!=null?`H ${money(x.halfRate)} · F ${money(x.fullRate)}`:`Full only · ${money(x.fullRate)}`;row.querySelector('.half').hidden=x.halfRate==null;row.querySelector('.half i').textContent=x.halfQty;row.querySelector('.full i').textContent=x.fullQty;row.querySelector('.minus').onclick=()=>decrementItem(x);row.querySelector('.half').onclick=()=>incrementItem(x,'half');row.querySelector('.full').onclick=()=>incrementItem(x,'full');row.querySelector('.remove').onclick=()=>{state.invoice.delete(x.id);renderInvoice()};const val=row.querySelector('.item-value');val.value=x.amount;val.oninput=()=>{x.amount=Number(val.value||0);state.invoice.set(x.id,x);updateBar();updateMenuFooter()};els.invoiceItems.append(frag)});updateBar();updateMenuFooter()}
+function updateMenuFooter(){els.selectedCount.textContent=`${state.invoice.size} item${state.invoice.size===1?'':'s'}`;els.menuTotal.textContent=money(total())}
+function updateBar(){const validCustomer=clean(els.customer.value);if(state.view==='invoice'){els.actionLabel.textContent='Invoice total';els.actionTotal.textContent=money(total());els.submit.textContent='Save Invoice';els.submit.disabled=!validCustomer||!state.invoice.size||total()<=0}else if(state.view==='payment'){const a=Number(els.paymentAmount.value||0);els.actionLabel.textContent='Payment amount';els.actionTotal.textContent=money(a);els.submit.textContent='Save Payment';els.submit.disabled=!validCustomer||a<=0}}
+async function submitTransaction(){busy(els.submit,true,'Saving…');try{let r;if(state.view==='invoice'){r=await api.createInvoice(state.token,{clientReference:uuid(),date:els.date.value,customerName:clean(els.customer.value),customerPhone:clean(els.phone.value),items:[...state.invoice.values()].map(x=>({menu_item_id:x.id.startsWith('custom-')?'':x.id,item_name:x.name,category:x.category,half_rate:x.halfRate,full_rate:x.fullRate,half_qty:x.halfQty,full_qty:x.fullQty,amount:x.amount}))})}else{r=await api.createPayment(state.token,{clientReference:uuid(),date:els.date.value,customerName:clean(els.customer.value),customerPhone:clean(els.phone.value),amount:Number(els.paymentAmount.value),note:clean(els.paymentNote.value)})}$('#successTitle').textContent=state.view==='invoice'?'Invoice saved':'Payment saved';$('#successMessage').textContent=`${r.reference||''} · ${money(r.total||r.amount)}`;els.success.showModal()}catch(e){toast(friendly(e))}finally{busy(els.submit,false,state.view==='invoice'?'Save Invoice':'Save Payment');updateBar()}}
+function resetAfterSave(){els.success.close();state.invoice.clear();state.customer=null;els.customer.value='';els.phone.value='';els.paymentAmount.value='';els.paymentNote.value='';renderInvoice()}
+async function saveCategory(e){e.preventDefault();const p={category:clean($('#newCategoryName').value),name:clean($('#newItemName').value),halfRate:$('#newHalfPrice').value?Number($('#newHalfPrice').value):null,fullRate:Number($('#newFullPrice').value)};try{const r=await api.addMenuItem(state.token,p);state.menu.push({id:r.id||`custom-${Date.now()}`,...p});els.categoryForm.reset();els.categoryDialog.close();renderCategories();toast('Category and item added')}catch(err){toast(friendly(err))}}
+async function loadReport(){try{const r=await api.getReport(state.token,els.reportFrom.value,els.reportTo.value);state.report=r?.transactions||r||[];state.expenses=r?.expenses||[];const sales=state.report.filter(x=>x.transaction_type==='invoice').reduce((s,x)=>s+Number(x.amount),0);const payments=state.report.filter(x=>x.transaction_type==='payment').reduce((s,x)=>s+Number(x.amount),0);const expenses=state.expenses.reduce((s,x)=>s+Number(x.amount),0);els.reportSales.textContent=money(sales);els.reportPayments.textContent=money(payments);els.reportExpenses.textContent=money(expenses);els.reportNet.textContent=money(sales-payments-expenses);renderActivity()}catch(e){toast(friendly(e))}}
+function renderActivity(){els.reportList.innerHTML='';const todayStr=today();state.report.forEach(x=>{const d=document.createElement('div');d.className='activity';d.innerHTML=`<div><b>${escapeHtml(x.customer_name)}</b><small>${x.reference} · ${x.transaction_date}</small></div><strong>${x.transaction_type==='payment'?'-':'+'}${money(x.amount)}</strong>${x.transaction_date===todayStr?'<button class="edit">✎</button>':''}`;d.querySelector('.edit')?.addEventListener('click',()=>openEdit(x));els.reportList.append(d)});state.expenses.forEach(x=>{const d=document.createElement('div');d.className='activity';d.innerHTML=`<div><b>${escapeHtml(x.category)} expense</b><small>${escapeHtml(x.description)} · ${x.expense_date}</small></div><strong>-${money(x.amount)}</strong>`;els.reportList.append(d)});els.reportEmpty.hidden=!!(state.report.length+state.expenses.length)}
+function openEdit(x){$('#editId').value=x.id;$('#editType').value=x.transaction_type;$('#editDate').value=x.transaction_date;$('#editCustomer').value=x.customer_name;$('#editAmount').value=x.amount;$('#editNote').value=x.note||'';els.editDialog.showModal()}
+async function saveEdit(e){e.preventDefault();try{await api.editTransaction(state.token,{id:$('#editId').value,type:$('#editType').value,date:$('#editDate').value,customerName:$('#editCustomer').value,amount:Number($('#editAmount').value),note:$('#editNote').value});els.editDialog.close();await loadReport();toast('Transaction updated')}catch(err){toast(friendly(err))}}
+async function removeTransaction(){if(!confirm('Delete this transaction?'))return;try{await api.deleteTransaction(state.token,$('#editType').value,$('#editId').value);els.editDialog.close();await loadReport();toast('Transaction deleted')}catch(err){toast(friendly(err))}}
+async function generateLedger(){const name=clean($('#ledgerCustomer').value);if(!name)return toast('Enter customer name');try{state.ledger=await api.getLedger(state.token,name,$('#ledgerFrom').value,$('#ledgerTo').value)||[];renderLedger(name)}catch(e){toast(friendly(e))}}
+function renderLedger(name){let bal=0;$('#ledgerList').innerHTML='';state.ledger.forEach(x=>{bal+=x.transaction_type==='invoice'?Number(x.amount):-Number(x.amount);const d=document.createElement('div');d.className='ledger-row';d.innerHTML=`<small>${x.transaction_date}</small><span>${escapeHtml(x.reference)}</span><b>${money(bal)}</b>`;$('#ledgerList').append(d)});$('#ledgerSummary').innerHTML=`<h3>${escapeHtml(name)}</h3><p>Running balance: <b>${money(bal)}</b></p>`}
+function ledgerLines(){const name=clean($('#ledgerCustomer').value);let bal=0;return {name,rows:state.ledger.map(x=>{bal+=x.transaction_type==='invoice'?Number(x.amount):-Number(x.amount);return [x.transaction_date,x.reference,x.transaction_type,money(x.amount),money(bal)]}),balance:bal}}
+function exportLedgerPdf(){if(!state.ledger.length)return toast('Generate ledger first');const {jsPDF}=window.jspdf||{};if(!jsPDF)return toast('PDF library is still loading');const d=new jsPDF();const l=ledgerLines();d.setFontSize(18);d.text('Mainstreet Customer Ledger',14,18);d.setFontSize(12);d.text(l.name,14,27);let y=38;l.rows.forEach(r=>{d.text(r.join('   '),14,y);y+=7;if(y>280){d.addPage();y=18}});d.save(`${l.name}-ledger.pdf`)}
+function ledgerCanvas(){const l=ledgerLines(),c=document.createElement('canvas');c.width=1080;c.height=Math.max(700,240+l.rows.length*52);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.fillStyle='#111';x.font='bold 42px sans-serif';x.fillText('Mainstreet Customer Ledger',50,70);x.font='28px sans-serif';x.fillText(l.name,50,120);x.font='22px sans-serif';let y=190;l.rows.forEach(r=>{x.fillText(r.join('   |   '),50,y);y+=48});x.font='bold 28px sans-serif';x.fillText(`Balance: ${money(l.balance)}`,50,y+30);return c}
+function exportLedgerJpg(){if(!state.ledger.length)return toast('Generate ledger first');const a=document.createElement('a');a.download=`${clean($('#ledgerCustomer').value)}-ledger.jpg`;a.href=ledgerCanvas().toDataURL('image/jpeg',.92);a.click()}
+async function shareLedger(){if(!state.ledger.length)return toast('Generate ledger first');const c=ledgerCanvas();const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));const file=new File([blob],'customer-ledger.jpg',{type:'image/jpeg'});if(navigator.canShare?.({files:[file]}))await navigator.share({title:'Mainstreet Ledger',text:`Ledger for ${clean($('#ledgerCustomer').value)}`,files:[file]});else{const phone=clean($('#ledgerPhone').value).replace(/\D/g,'');window.open(`https://wa.me/${phone}?text=${encodeURIComponent('Mainstreet customer ledger is ready. Please find the ledger image attached.')}`,'_blank');toast('Attach the downloaded ledger image in WhatsApp')}}
+function exportExcel(){const rows=state.report.map(x=>({Date:x.transaction_date,Type:x.transaction_type,Reference:x.reference,Customer:x.customer_name,Amount:Number(x.amount)}));state.expenses.forEach(x=>rows.push({Date:x.expense_date,Type:'expense',Reference:x.category,Customer:x.description,Amount:Number(x.amount)}));if(!rows.length)return toast('No report data');if(!window.XLSX)return toast('Excel library is still loading');const ws=XLSX.utils.json_to_sheet(rows),book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,ws,'Transactions');XLSX.writeFile(book,`Mainstreet-${els.reportFrom.value}-to-${els.reportTo.value}.xlsx`)}
+async function openExpenses(){els.expenseDialog.showModal();await loadExpenses()}
+async function loadExpenses(){try{state.expenses=await api.getExpenses(state.token,els.reportFrom.value,els.reportTo.value)||[];const box=$('#expenseList');box.innerHTML='';state.expenses.forEach(x=>{const d=document.createElement('div');d.className='activity';d.innerHTML=`<div><b>${escapeHtml(x.category)}</b><small>${escapeHtml(x.description)} · ${x.expense_date}</small></div><strong>${money(x.amount)}</strong>`;box.append(d)})}catch(e){toast(friendly(e))}}
+async function saveExpense(e){e.preventDefault();try{await api.saveExpense(state.token,{date:$('#expenseDate').value,category:$('#expenseCategory').value,description:clean($('#expenseDescription').value),amount:Number($('#expenseAmount').value)});$('#expenseDescription').value='';$('#expenseAmount').value='';await loadExpenses();toast('Expense saved')}catch(err){toast(friendly(err))}}
+function friendly(e){if(['PGRST202','42883','42P01','42703'].includes(e?.code))return 'Database upgrade required. Run supabase/05-business-suite.sql in Supabase SQL Editor.';if(e?.status===401)return 'Session expired. Log in again.';return e?.message||'Something went wrong'}
+function escapeHtml(v){return String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
