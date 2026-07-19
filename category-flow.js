@@ -9,7 +9,7 @@ const invoiceItems=document.querySelector('#invoiceItems');
 const menuTotal=document.querySelector('#menuRunningTotal');
 const selectedCount=document.querySelector('#selectedItemCount');
 function openItemPopup(category){if(!itemDialog||!menuList||!itemDialogBody)return;itemDialogTitle.textContent=category;itemDialogBody.append(menuList);menuList.hidden=false;itemDialog.showModal();requestAnimationFrame(updateSelectionCounters)}
-function closeItemPopup(){if(!itemDialog?.open)return;document.querySelector('#categoryGrid')?.insertAdjacentElement('afterend',menuList);menuList.hidden=true;itemDialog.close()}
+function closeItemPopup(){if(!itemDialog?.open)return;categoryGrid?.insertAdjacentElement('afterend',menuList);itemDialog.close();document.querySelector('#menuBack')?.click();requestAnimationFrame(updateSelectionCounters)}
 categoryGrid?.addEventListener('click',event=>{const card=event.target.closest('.category-card');if(!card)return;const category=card.querySelector('b')?.textContent?.trim()||'Items';setTimeout(()=>openItemPopup(category),0)});
 document.querySelector('#closeItemDialog')?.addEventListener('click',closeItemPopup);document.querySelector('#doneItemDialog')?.addEventListener('click',closeItemPopup);itemDialog?.addEventListener('cancel',event=>{event.preventDefault();closeItemPopup()});
 function invoiceCounts(){const counts=new Map();invoiceItems?.querySelectorAll('.invoice-row').forEach(row=>{const name=row.querySelector('.item-name')?.textContent?.trim();if(name)counts.set(name,{half:row.querySelector('.half i')?.textContent?.trim()||'0',full:row.querySelector('.full i')?.textContent?.trim()||'0'})});return counts}
