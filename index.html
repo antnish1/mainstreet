@@ -2,243 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#101010" />
-  <meta name="description" content="Mainstreet mobile billing, payments and reports." />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0e10" />
+  <meta name="description" content="Mainstreet mobile billing, payments, reports and expenses." />
   <title>Mainstreet Business</title>
   <link rel="icon" href="./assets/mainstreet-logo.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="./assets/mainstreet-logo.svg" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <div id="loginScreen" class="login-screen">
+  <section id="loginScreen" class="login-screen">
     <form id="loginForm" class="login-card">
-      <img src="./assets/mainstreet-logo.svg" alt="Mainstreet" class="login-logo" />
-      <p class="eyebrow">Mainstreet business</p>
-      <h1>Staff access</h1>
-      <p class="muted">Enter the business PIN to open billing.</p>
-      <label class="field pin-field">
-        <span>4–8 digit PIN</span>
-        <input id="staffPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" autocomplete="current-password" placeholder="••••" required />
-      </label>
-      <button id="loginButton" class="primary-button full-width" type="submit">Open app</button>
-      <p id="loginError" class="form-error" hidden></p>
+      <img src="./assets/mainstreet-logo.svg" alt="Mainstreet" />
+      <p class="eyebrow">Mainstreet business</p><h1>Staff access</h1>
+      <p class="muted">Enter your business PIN.</p>
+      <input id="staffPin" class="input" type="password" inputmode="numeric" maxlength="8" placeholder="••••" required />
+      <button id="loginButton" class="btn primary" type="submit">Open app</button>
+      <p id="loginError" class="error" hidden></p>
     </form>
-  </div>
+  </section>
 
   <div id="appShell" class="app-shell" hidden>
     <header class="brand-bar">
-      <div class="brand-lockup">
-        <img class="brand-logo" src="./assets/mainstreet-logo.svg" alt="Mainstreet Meals & Coffee" />
-        <div class="brand-copy">
-          <p class="brand-kicker">MMC</p>
-          <h1>Mainstreet</h1>
-          <p>Business billing</p>
-        </div>
-      </div>
-      <button id="cloudStatus" class="cloud-chip" type="button" title="Cloud status">
-        <span class="status-dot"></span>
-        <span class="status-text">Cloud</span>
-      </button>
+      <div class="brand-lockup"><img src="./assets/mainstreet-logo.svg" alt="Mainstreet" /><div><b>Mainstreet</b><span>Meals & Coffee</span></div></div>
+      <div class="header-actions"><button id="cloudStatus" class="status-chip" type="button"><i></i><span>Cloud</span></button><button id="logoutButton" class="icon-btn" type="button" aria-label="Logout">↪</button></div>
     </header>
 
-    <nav class="top-tabs" aria-label="Main sections">
-      <button class="tab-button is-active" type="button" data-view="invoice" aria-pressed="true">
-        <span>▤</span>Invoice
-      </button>
-      <button class="tab-button" type="button" data-view="payment" aria-pressed="false">
-        <span>₹</span>Payment
-      </button>
-      <button class="tab-button" type="button" data-view="report" aria-pressed="false">
-        <span>▥</span>Report
-      </button>
+    <nav class="top-tabs">
+      <button class="tab active" data-view="invoice" type="button">▤<span>Invoice</span></button>
+      <button class="tab" data-view="payment" type="button">₹<span>Payment</span></button>
+      <button class="tab" data-view="report" type="button">▥<span>Report</span></button>
     </nav>
 
-    <main>
-      <section id="transactionHeader" class="customer-strip">
-        <label class="field date-field">
-          <span>Date</span>
-          <input id="transactionDate" type="date" />
-        </label>
-        <label class="field customer-field">
-          <span>Customer name</span>
-          <div class="input-with-icon">
-            <input id="customerName" type="text" placeholder="Enter at least 2 letters" autocomplete="off" autocapitalize="words" />
-            <button id="clearCustomer" class="input-clear" type="button" aria-label="Clear customer" hidden>×</button>
-          </div>
-          <div id="customerSuggestions" class="suggestions" role="listbox" hidden></div>
-          <small id="customerHint" class="field-hint">New customers are saved automatically.</small>
-        </label>
+    <main id="mainContent">
+      <section id="transactionHeader" class="transaction-strip card">
+        <label><span>Date</span><input id="transactionDate" type="date" /></label>
+        <label class="customer-label"><span>Customer</span><div class="input-wrap"><input id="customerName" type="text" autocomplete="off" placeholder="Type 2+ letters" /><button id="clearCustomer" type="button" hidden>×</button></div><div id="customerSuggestions" class="suggestions" hidden></div></label>
+        <label><span>Mobile</span><input id="customerPhone" type="tel" inputmode="tel" placeholder="Optional" maxlength="15" /></label>
       </section>
 
-      <section id="invoiceView" class="app-view">
-        <button id="openMenu" class="menu-trigger" type="button">
-          <span class="search-symbol">⌕</span>
-          <span>
-            <strong>Search or add menu item</strong>
-            <small>Browse categories, then select Half or Full</small>
-          </span>
-          <b>＋</b>
-        </button>
-
-        <section class="invoice-card">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Current invoice</p>
-              <h2>Item details</h2>
-            </div>
-            <button id="clearInvoice" class="link-button danger" type="button" disabled>Clear</button>
-          </div>
-
-          <div id="emptyInvoice" class="empty-state">
-            <div class="empty-icon">▤</div>
-            <strong>No items added</strong>
-            <p>Tap the search bar above to add items.</p>
-          </div>
-          <div id="invoiceItems" class="invoice-items"></div>
+      <section id="invoiceView" class="view active-view">
+        <button id="openMenu" class="menu-trigger" type="button"><span>⌕</span><div><b>Search or add items</b><small>Categories, Half and Full</small></div><strong>＋</strong></button>
+        <section class="card invoice-card">
+          <div class="section-head"><div><p class="eyebrow">Current invoice</p><h2>Items</h2></div><button id="clearInvoice" class="text-btn danger" type="button">Clear</button></div>
+          <div id="emptyInvoice" class="empty"><b>No items yet</b><span>Tap “Search or add items”.</span></div>
+          <div id="invoiceItems" class="invoice-list"></div>
         </section>
       </section>
 
-      <section id="paymentView" class="app-view" hidden>
-        <section class="content-card payment-card">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Old bill collection</p>
-              <h2>Receive payment</h2>
-            </div>
-          </div>
-          <label class="field amount-field">
-            <span>Payment amount</span>
-            <div class="money-input large">
-              <span>₹</span>
-              <input id="paymentAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" />
-            </div>
-          </label>
-          <label class="field">
-            <span>Payment note <em>(optional)</em></span>
-            <input id="paymentNote" type="text" maxlength="120" placeholder="Cash, UPI reference or old bill number" />
-          </label>
-          <div id="paymentBalance" class="balance-panel" hidden></div>
+      <section id="paymentView" class="view" hidden>
+        <section class="card form-card"><p class="eyebrow">Old bill collection</p><h2>Receive payment</h2>
+          <label><span>Amount</span><div class="money"><b>₹</b><input id="paymentAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" /></div></label>
+          <label><span>Note</span><input id="paymentNote" type="text" maxlength="120" placeholder="Cash, UPI or bill reference" /></label>
+          <div id="paymentBalance" class="balance" hidden></div>
         </section>
       </section>
 
-      <section id="reportView" class="app-view report-view" hidden>
-        <section class="content-card report-filter-card">
-          <div class="section-heading compact-heading">
-            <div>
-              <p class="eyebrow">Business overview</p>
-              <h2>Reports</h2>
-            </div>
-            <button id="refreshReport" class="icon-button" type="button" aria-label="Refresh report">↻</button>
-          </div>
-          <div class="report-date-grid">
-            <label class="field"><span>From</span><input id="reportFrom" type="date" /></label>
-            <label class="field"><span>To</span><input id="reportTo" type="date" /></label>
-          </div>
-          <div class="quick-range">
-            <button type="button" data-range="today" class="is-active">Today</button>
-            <button type="button" data-range="week">7 days</button>
-            <button type="button" data-range="month">30 days</button>
-          </div>
+      <section id="reportView" class="view" hidden>
+        <section class="card report-toolbar">
+          <div class="section-head"><div><p class="eyebrow">Business overview</p><h2>Reports</h2></div><button id="refreshReport" class="icon-btn" type="button">↻</button></div>
+          <div class="date-grid"><label><span>From</span><input id="reportFrom" type="date" /></label><label><span>To</span><input id="reportTo" type="date" /></label></div>
+          <div class="report-actions"><button id="exportExcel" class="btn secondary" type="button">Excel</button><button id="openLedger" class="btn secondary" type="button">Customer ledger</button><button id="openExpense" class="btn secondary" type="button">Expenses</button></div>
         </section>
-
-        <div class="summary-grid">
-          <article><span>Sales</span><strong id="reportSales">₹0</strong></article>
-          <article><span>Payments</span><strong id="reportPayments">₹0</strong></article>
-          <article><span>Net due</span><strong id="reportNet">₹0</strong></article>
-          <article><span>Entries</span><strong id="reportCount">0</strong></article>
-        </div>
-
-        <section class="content-card report-list-card">
-          <div class="section-heading compact-heading">
-            <div><p class="eyebrow">Transactions</p><h2>Activity</h2></div>
-          </div>
-          <div id="reportLoading" class="inline-loading" hidden>Loading report…</div>
-          <div id="reportEmpty" class="empty-state small" hidden><strong>No transactions</strong><p>Nothing was recorded in this date range.</p></div>
-          <div id="reportList" class="report-list"></div>
-        </section>
-
-        <section class="content-card settings-card">
-          <details>
-            <summary>Business security</summary>
-            <form id="changePinForm" class="settings-form">
-              <label class="field"><span>Current PIN</span><input id="currentPin" type="password" inputmode="numeric" maxlength="8" required /></label>
-              <label class="field"><span>New PIN</span><input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" required /></label>
-              <button class="secondary-button" type="submit">Change PIN</button>
-            </form>
-          </details>
-        </section>
+        <div class="summary-grid"><article><span>Sales</span><b id="reportSales">₹0</b></article><article><span>Payments</span><b id="reportPayments">₹0</b></article><article><span>Expenses</span><b id="reportExpenses">₹0</b></article><article><span>Net</span><b id="reportNet">₹0</b></article></div>
+        <section class="card"><div class="section-head"><div><p class="eyebrow">Transactions</p><h2>Activity</h2></div></div><div id="reportEmpty" class="empty" hidden>No entries</div><div id="reportList" class="activity-list"></div></section>
       </section>
     </main>
 
-    <footer id="actionBar" class="action-bar">
-      <div class="total-block"><span id="actionLabel">Invoice total</span><strong id="actionTotal">₹0</strong></div>
-      <button id="submitTransaction" class="primary-button" type="button" disabled>Save Invoice</button>
-    </footer>
+    <footer id="actionBar" class="action-bar"><div><span id="actionLabel">Invoice total</span><b id="actionTotal">₹0</b></div><button id="submitTransaction" class="btn primary" type="button" disabled>Save Invoice</button></footer>
   </div>
 
   <dialog id="menuDialog" class="sheet-dialog">
-    <div class="sheet-shell">
-      <header class="sheet-header">
-        <button id="menuBack" class="icon-button" type="button" aria-label="Back" hidden>‹</button>
-        <div><p class="eyebrow">Add items</p><h2 id="menuDialogTitle">Choose category</h2></div>
-        <button id="closeMenu" class="icon-button" type="button" aria-label="Close">×</button>
-      </header>
-      <label class="dialog-search">
-        <span>⌕</span>
-        <input id="menuSearch" type="search" placeholder="Search all menu items" autocomplete="off" />
-        <button id="clearMenuSearch" type="button" hidden>×</button>
-      </label>
-      <div id="categoryGrid" class="category-grid"></div>
-      <div id="menuItemList" class="menu-item-list" hidden></div>
-      <button id="addCustomItem" class="custom-item-button" type="button">＋ Add custom item</button>
-      <footer class="sheet-footer">
-        <span><b id="selectedItemCount">0</b> items selected</span>
-        <button id="doneMenu" class="primary-button" type="button">Done</button>
-      </footer>
-    </div>
+    <section class="sheet-shell">
+      <header class="sheet-header"><button id="menuBack" class="icon-btn" type="button" hidden>‹</button><div><p class="eyebrow">Add items</p><h2 id="menuDialogTitle">Choose category</h2></div><button id="closeMenu" class="icon-btn" type="button">×</button></header>
+      <div class="dialog-search"><span>⌕</span><input id="menuSearch" type="search" placeholder="Search all menu items" autocomplete="off" /><button id="clearMenuSearch" type="button" hidden>×</button></div>
+      <div id="categoryGrid" class="category-grid"></div><div id="menuItemList" class="menu-items" hidden></div>
+      <button id="addCategory" class="add-category" type="button">＋ Add Category</button>
+      <footer class="sheet-footer"><div><span id="selectedItemCount">0 items</span><b id="menuRunningTotal">₹0</b></div><button id="doneMenu" class="btn primary" type="button">Done</button></footer>
+    </section>
   </dialog>
 
-  <dialog id="customItemDialog" class="modal-dialog">
-    <form id="customItemForm" class="modal-card">
-      <header><div><p class="eyebrow">Manual entry</p><h2>Custom item</h2></div><button type="button" data-close-custom>×</button></header>
-      <label class="field"><span>Item name</span><input id="customItemName" type="text" maxlength="60" required /></label>
-      <label class="field"><span>Full rate</span><div class="money-input"><span>₹</span><input id="customItemRate" type="number" min="0.01" step="0.01" inputmode="decimal" required /></div></label>
-      <div class="modal-actions"><button class="secondary-button" type="button" data-close-custom>Cancel</button><button class="primary-button" type="submit">Add item</button></div>
-    </form>
-  </dialog>
+  <dialog id="categoryDialog" class="modal"><form id="categoryForm" class="modal-card"><header><div><p class="eyebrow">Menu setup</p><h2>Add category & item</h2></div><button data-close="categoryDialog" type="button">×</button></header><label><span>Category name</span><input id="newCategoryName" required /></label><label><span>Item name</span><input id="newItemName" required /></label><div class="date-grid"><label><span>Half price</span><input id="newHalfPrice" type="number" min="0" step="0.01" /></label><label><span>Full price</span><input id="newFullPrice" type="number" min="0.01" step="0.01" required /></label></div><div class="modal-actions"><button class="btn secondary" data-close="categoryDialog" type="button">Cancel</button><button class="btn primary" type="submit">Save</button></div></form></dialog>
 
-  <dialog id="successDialog" class="modal-dialog success-dialog">
-    <div class="modal-card success-card">
-      <div class="success-mark">✓</div>
-      <p class="eyebrow">Saved successfully</p>
-      <h2 id="successTitle">Invoice saved</h2>
-      <p id="successMessage" class="muted"></p>
-      <button id="newTransaction" class="primary-button full-width" type="button">New transaction</button>
-    </div>
-  </dialog>
+  <dialog id="ledgerDialog" class="sheet-dialog"><section class="sheet-shell"><header class="sheet-header"><div><p class="eyebrow">Customer report</p><h2>Ledger</h2></div><button data-close="ledgerDialog" class="icon-btn" type="button">×</button></header><div class="ledger-filters"><input id="ledgerCustomer" placeholder="Customer name" autocomplete="off" /><input id="ledgerPhone" placeholder="Mobile no." /><div class="date-grid"><input id="ledgerFrom" type="date" /><input id="ledgerTo" type="date" /></div><button id="generateLedger" class="btn primary" type="button">Generate ledger</button></div><div id="ledgerSummary" class="ledger-summary"></div><div id="ledgerList" class="ledger-list"></div><footer class="sheet-footer"><button id="ledgerPdf" class="btn secondary" type="button">PDF</button><button id="ledgerJpg" class="btn secondary" type="button">JPG</button><button id="ledgerShare" class="btn primary" type="button">Share</button></footer></section></dialog>
 
-  <template id="invoiceRowTemplate">
-    <article class="invoice-row">
-      <div class="invoice-row-top">
-        <div class="item-copy"><strong class="item-name"></strong><span class="item-meta"></span></div>
-        <button class="remove-button" type="button" aria-label="Remove item">×</button>
-      </div>
-      <div class="invoice-row-bottom">
-        <div class="portion-control">
-          <button class="undo-button" type="button" aria-label="Undo quantity">−</button>
-          <button class="portion-button half-button" type="button"><span>H</span><b class="half-count">0</b></button>
-          <button class="portion-button full-button" type="button"><span>F</span><b class="full-count">0</b></button>
-        </div>
-        <label class="value-editor"><span>Value</span><div><b>₹</b><input class="item-value" type="number" min="0" step="0.01" inputmode="decimal" /></div></label>
-      </div>
-    </article>
-  </template>
+  <dialog id="expenseDialog" class="sheet-dialog"><section class="sheet-shell"><header class="sheet-header"><div><p class="eyebrow">Cash outflow</p><h2>Expenses</h2></div><button data-close="expenseDialog" class="icon-btn" type="button">×</button></header><form id="expenseForm" class="expense-form"><input id="expenseDate" type="date" required /><select id="expenseCategory"><option>Daily Needs</option><option>Cigarette</option></select><input id="expenseDescription" placeholder="Description" required /><input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="Amount" required /><button class="btn primary" type="submit">Save expense</button></form><div id="expenseList" class="activity-list"></div></section></dialog>
 
-  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <dialog id="editDialog" class="modal"><form id="editForm" class="modal-card"><header><div><p class="eyebrow">Today only</p><h2>Edit transaction</h2></div><button data-close="editDialog" type="button">×</button></header><input id="editId" type="hidden" /><input id="editType" type="hidden" /><label><span>Date</span><input id="editDate" type="date" required /></label><label><span>Customer</span><input id="editCustomer" required /></label><label><span>Amount</span><input id="editAmount" type="number" min="0.01" step="0.01" required /></label><label><span>Note</span><input id="editNote" /></label><div class="modal-actions"><button id="deleteTransaction" class="btn danger-btn" type="button">Delete</button><button class="btn primary" type="submit">Save changes</button></div></form></dialog>
+
+  <dialog id="successDialog" class="modal"><div class="modal-card success-card"><div class="success-mark">✓</div><h2 id="successTitle">Saved</h2><p id="successMessage"></p><button id="newTransaction" class="btn primary" type="button">New transaction</button></div></dialog>
+
+  <template id="invoiceRowTemplate"><article class="invoice-row"><div class="item-main"><div><b class="item-name"></b><small class="item-meta"></small></div><div class="portion-control"><button class="minus" type="button">−</button><button class="half" type="button">H <i>0</i></button><button class="full" type="button">F <i>0</i></button><button class="remove" type="button">×</button></div></div><label class="row-value"><span>₹</span><input class="item-value" type="number" min="0" step="0.01" /></label></article></template>
+  <div id="toastRegion" class="toasts"></div>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
