@@ -8,8 +8,73 @@ async function rpc(name,body){const response=await fetch(`${SUPABASE_URL}/rest/v
 function dateValue(date){const d=new Date(date);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function notify(message){const box=$('#toastRegion');if(!box)return;const row=document.createElement('div');row.className='toast';row.textContent=message;box.append(row);setTimeout(()=>row.remove(),3000)}
 
-function setupExpenseLedger(){const form=$('#expenseForm');if(!form||$('#expenseLedgerPanel'))return;const end=dateValue(new Date());const start=dateValue(new Date(Date.now()-29*86400000));const panel=document.createElement('section');panel.id='expenseLedgerPanel';panel.className='account-panel';panel.innerHTML=`<div class="account-head"><div><p class="eyebrow">Expense statement</p><h3>Expense ledger</h3></div><button id="refreshExpenseLedger" class="btn secondary" type="button">Refresh</button></div><div class="account-date-grid"><label><span>From</span><input id="expenseLedgerFrom" type="date" value="${start}"></label><label><span>To</span><input id="expenseLedgerTo" type="date" value="${end}"></label></div><div id="expenseLedgerSummary" class="account-summary-cards"></div><div id="expenseLedgerList" class="account-list"></div>`;form.after(panel);$('#refreshExpenseLedger').onclick=loadExpenseLedger;$('#expenseLedgerFrom').onchange=loadExpenseLedger;$('#expenseLedgerTo').onchange=loadExpenseLedger;loadExpenseLedger()}
-async function loadExpenseLedger(){try{const rows=await rpc('get_expenses',{p_token:sessionToken(),p_from:$('#expenseLedgerFrom').value,p_to:$('#expenseLedgerTo').value})||[];const total=rows.reduce((sum,row)=>sum+Number(row.amount||0),0);$('#expenseLedgerSummary').innerHTML=`<article><span>Total expenses</span><b>${money(total)}</b></article><article><span>Entries</span><b>${rows.length}</b></article>`;$('#expenseLedgerList').innerHTML=rows.length?rows.map(row=>`<div class="expense-ledger-row"><div><b>${safe(row.description)}</b><small>${safe(row.category)} · ${safe(row.expense_date)}</small></div><strong>${money(row.amount)}</strong></div>`).join(''):'<div class="account-empty">No expenses in selected date range</div>'}catch(error){notify(error.message)}}
+let expenseLedgerRows=[];
+function setupExpenseLedger(){
+  const form=$('#expenseForm');
+  if(!form||$('#expenseLedgerPanel'))return;
+  const oldList=$('#expenseList');
+  if(oldList){oldList.hidden=true;oldList.innerHTML=''}
+  const end=dateValue(new Date());
+  const start=dateValue(new Date(Date.now()-29*86400000));
+  const panel=document.createElement('section');
+  panel.id='expenseLedgerPanel';
+  panel.className='account-panel';
+  panel.innerHTML=`<div class="account-head"><div><p class="eyebrow">Expense statement</p><h3>Expense ledger</h3></div><div class="expense-ledger-actions"><button id="exportExpenseExcel" class="btn secondary" type="button">Excel</button><button id="refreshExpenseLedger" class="btn secondary" type="button">Refresh</button></div></div><div class="account-date-grid"><label><span>From</span><input id="expenseLedgerFrom" type="date" value="${start}"></label><label><span>To</span><input id="expenseLedgerTo" type="date" value="${end}"></label></div><div id="expenseLedgerSummary" class="account-summary-cards"></div><div id="expenseLedgerList" class="account-list"></div>`;
+  form.after(panel);
+  $('#refreshExpenseLedger').onclick=loadExpenseLedger;
+  $('#exportExpenseExcel').onclick=exportExpenseExcel;
+  $('#expenseLedgerFrom').onchange=loadExpenseLedger;
+  $('#expenseLedgerTo').onchange=loadExpenseLedger;
+  form.addEventListener('submit',()=>setTimeout(loadExpenseLedger,700));
+  loadExpenseLedger();
+}
+async function loadExpenseLedger(){
+  try{
+    const rows=await rpc('get_expenses',{p_token:sessionToken(),p_from:$('#expenseLedgerFrom').value,p_to:$('#expenseLedgerTo').value})||[];
+    const unique=new Map();
+    rows.forEach(row=>{
+      const key=row.id||`${row.expense_date}|${row.category}|${row.description}|${Number(row.amount||0)}|${row.created_at||''}`;
+      if(!unique.has(key))unique.set(key,row);
+    });
+    expenseLedgerRows=[...unique.values()];
+    const total=expenseLedgerRows.reduce((sum,row)=>sum+Number(row.amount||0),0);
+    $('#expenseLedgerSummary').innerHTML=`<article><span>Total expenses</span><b>${money(total)}</b></article><article><span>Entries</span><b>${expenseLedgerRows.length}</b></article>`;
+    $('#expenseLedgerList').innerHTML=expenseLedgerRows.length?expenseLedgerRows.map(row=>`<div class="expense-ledger-row"><div><b>${safe(row.description)}</b><small>${safe(row.category)} · ${safe(row.expense_date)}</small></div><strong>${money(row.amount)}</strong></div>`).join(''):'<div class="account-empty">No expenses in selected date range</div>';
+  }catch(error){notify(error.message)}
+}
+function exportExpenseExcel(){
+  if(!window.XLSX)return notify('Excel library is still loading');
+  if(!expenseLedgerRows.length)return notify('No expense entries to export');
+  const from=$('#expenseLedgerFrom').value;
+  const to=$('#expenseLedgerTo').value;
+  const total=expenseLedgerRows.reduce((sum,row)=>sum+Number(row.amount||0),0);
+  const data=[
+    ['MAINSTREET MEALS & COFFEE'],
+    ['Expense Ledger'],
+    [`Period: ${from} to ${to}`],
+    [],
+    ['Date','Category','Description','Amount'],
+    ...expenseLedgerRows.map(row=>[row.expense_date,row.category,row.description,Number(row.amount||0)]),
+    [],
+    ['','','Total Expenses',total]
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:14},{wch:22},{wch:42},{wch:16}];
+  ws['!merges']=[XLSX.utils.decode_range('A1:D1'),XLSX.utils.decode_range('A2:D2'),XLSX.utils.decode_range('A3:D3')];
+  const headerStyle={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1F2329'}},alignment:{horizontal:'center'}};
+  ['A1','A2','A3'].forEach(cell=>{if(ws[cell])ws[cell].s={font:{bold:true},alignment:{horizontal:'center'}}});
+  ['A5','B5','C5','D5'].forEach(cell=>{if(ws[cell])ws[cell].s=headerStyle});
+  for(let r=5;r<5+expenseLedgerRows.length;r++){
+    const amountCell=ws[`D${r+1}`];
+    if(amountCell){amountCell.z='₹#,##0.00';amountCell.s={font:{color:{rgb:'D97706'}}}}
+  }
+  const totalCell=ws[`D${data.length}`];
+  if(totalCell){totalCell.z='₹#,##0.00';totalCell.s={font:{bold:true},fill:{fgColor:{rgb:'FFF1E6'}}}}
+  ws['!autofilter']={ref:`A5:D${5+expenseLedgerRows.length}`};
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Expense Ledger');
+  XLSX.writeFile(wb,`Mainstreet-Expense-Ledger-${from}-to-${to}.xlsx`);
+}
 
 function setupCustomerSummary(){const filters=$('.ledger-filters');if(!filters||$('#customerSummaryPanel'))return;const panel=document.createElement('section');panel.id='customerSummaryPanel';panel.className='account-panel customer-summary-panel';panel.innerHTML='<div class="account-head"><div><p class="eyebrow">All accounts</p><h3>Customer balances</h3></div><button id="refreshCustomerSummary" class="btn secondary" type="button">Refresh</button></div><p class="account-note">Tap any customer to open the last 30 days ledger.</p><div id="customerSummaryStats" class="account-summary-cards"></div><div id="customerSummaryList" class="account-list"></div>';filters.after(panel);$('#refreshCustomerSummary').onclick=loadCustomerSummary;loadCustomerSummary()}
 async function loadCustomerSummary(){try{const rows=await rpc('get_customer_summary',{p_token:sessionToken()})||[];const receivable=rows.filter(row=>Number(row.balance)>0).reduce((sum,row)=>sum+Number(row.balance),0);const greenCount=rows.filter(row=>Number(row.balance)<=0).length;$('#customerSummaryStats').innerHTML=`<article><span>Total customers</span><b>${rows.length}</b></article><article><span>Total receivable</span><b class="balance-debit">${money(receivable)}</b></article><article><span>Settled / credit</span><b class="balance-credit">${greenCount}</b></article>`;$('#customerSummaryList').innerHTML=rows.length?rows.map(row=>{const balance=Number(row.balance||0);const color=balance>0?'balance-debit':'balance-credit';const status=balance>0?'Debit':'Settled / Credit';return `<button type="button" class="customer-summary-row" data-name="${safe(row.name)}" data-phone="${safe(row.phone||'')}"><div><b>${safe(row.name)}</b><small>${safe(row.phone||'No mobile')} · ${status}</small></div><strong class="${color}">${money(balance)}</strong></button>`}).join(''):'<div class="account-empty">No customers found</div>';$('#customerSummaryList').querySelectorAll('.customer-summary-row').forEach(button=>button.onclick=()=>openCustomerLedger(button.dataset.name,button.dataset.phone))}catch(error){notify(error.message)}}
