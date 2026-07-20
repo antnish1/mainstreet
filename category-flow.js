@@ -1,3 +1,4 @@
+import './business-enhancements.js';
 const categoryGrid=document.querySelector('#categoryGrid');
 const menuList=document.querySelector('#menuItemList');
 const itemDialog=document.querySelector('#itemDialog');
