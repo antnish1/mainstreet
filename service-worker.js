@@ -1,4 +1,4 @@
-const CACHE_NAME = "mainstreet-business-v8";
+const CACHE_NAME = "mainstreet-business-v9";
 const APP_SHELL = ["./","./index.html","./styles.css","./category-photos.css","./category-images-individual.css","./business-enhancements.css","./category-flow.js","./business-enhancements.js","./app.js","./menu-data.js","./supabase-api.js","./supabase-config.js","./manifest.webmanifest","./assets/mainstreet-logo.svg"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)));self.skipWaiting()});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))));self.clients.claim()});
