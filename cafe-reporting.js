@@ -4,7 +4,8 @@ const $=s=>document.querySelector(s);
 const key='mainstreet.staff-session.v3';
 const session=()=>JSON.parse(localStorage.getItem(key)||'null');
 const token=()=>session()?.token||null;
-const isAdmin=()=>String(session()?.role||'').toLowerCase()==='admin';
+let resolvedRole=String(window.mainstreetRole||document.body.dataset.role||session()?.user_role||session()?.role||'').toLowerCase();
+const isAdmin=()=>resolvedRole==='admin'||String(window.mainstreetRole||document.body.dataset.role||session()?.user_role||session()?.role||'').toLowerCase()==='admin';
 const headers={apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${SUPABASE_ANON_KEY}`,'Content-Type':'application/json'};
 const money=n=>`₹${Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,14 +18,12 @@ function toast(message){const host=$('#toastRegion');if(!host)return;const d=doc
 
 function inject(){const view=$('#reportView');if(!view||$('#cafeReports'))return;view.classList.add('cafe-report-host');const shell=document.createElement('section');shell.id='cafeReports';shell.className='cafe-reports';shell.innerHTML=`
   <header class="cafe-report-head">
-    <div><p class="eyebrow">Business intelligence</p><h2>Café Reports</h2><small id="cafeReportPeriod"></small></div>
-    <div class="cafe-report-head-actions"><button id="cafeReportExport" type="button">Export</button><button id="cafeReportRefresh" type="button" aria-label="Refresh">↻</button></div>
+    <div class="cafe-report-title"><h2>Café Reports</h2><small id="cafeReportPeriod"></small></div>
+    <div class="cafe-report-head-actions"><button id="cafeReportExport" type="button" aria-label="Export report" title="Export">⇩</button><button id="cafeReportRefresh" type="button" aria-label="Refresh report" title="Refresh">↻</button></div>
   </header>
-  <nav id="cafeReportTools" class="cafe-report-tools" aria-label="Report tools">
-    <button id="cafeOpenLedger" type="button"><span>▤</span>Customer ledger</button>
-    <button id="cafeOpenExpenses" type="button"><span>₹</span>Expenses</button>
+  <nav id="cafeReportTools" class="cafe-report-tools" aria-label="Administrative report tools">
     <button id="cafeOpeningBalance" class="admin-report-tool" type="button"><span>＋</span>Opening balance</button>
-    <button id="cafeTodayEntries" class="admin-report-tool" type="button"><span>✎</span>Today's entries</button>
+    <button id="cafeTodayEntries" class="admin-report-tool" type="button"><span>✎</span>Edit today’s entries</button>
   </nav>
   <nav id="cafePeriodPresets" class="cafe-period-presets">
     <button data-preset="today" class="active">Today</button><button data-preset="yesterday">Yesterday</button><button data-preset="7days">7 Days</button><button data-preset="month">Month</button><button data-preset="custom">Custom</button>
@@ -43,13 +42,11 @@ function bind(){
   $('#cafeReportRefresh').onclick=load;
   $('#cafeApplyDates').onclick=load;
   $('#cafeReportExport').onclick=exportReport;
-  $('#cafeOpenLedger').onclick=()=>$('#openLedger')?.click();
-  $('#cafeOpenExpenses').onclick=()=>$('#openExpense')?.click();
   $('#cafeOpeningBalance').onclick=openOpeningBalance;
   $('#cafeTodayEntries').onclick=()=>{setPreset('today');selectSection('activity')};
   $('#cafeReportContent').onclick=handleContentClick;
   $('#editDialog')?.addEventListener('close',()=>{if(state.section==='activity')setTimeout(load,80)});
-  document.addEventListener('mainstreet-role-ready',syncToolPermissions);
+  document.addEventListener('mainstreet-role-ready',event=>{resolvedRole=String(event.detail?.role||window.mainstreetRole||document.body.dataset.role||session()?.user_role||session()?.role||'').toLowerCase();syncToolPermissions();render()});
   document.querySelector('.tab[data-view="report"]')?.addEventListener('click',()=>setTimeout(load,30));
 }
 function syncToolPermissions(){document.querySelectorAll('.admin-report-tool').forEach(button=>button.hidden=!isAdmin())}
@@ -66,10 +63,7 @@ function metric(label,value){return `<div class="cafe-metric"><span>${safe(label
 function empty(text){return `<div class="cafe-report-empty">${safe(text)}</div>`}
 
 function render(){if(!state.data)return;const renderers={overview:renderOverview,sales:renderSales,collections:renderCollections,expenses:renderExpenses,customers:renderCustomers,items:renderItems,activity:renderActivity};$('#cafeReportContent').innerHTML=(renderers[state.section]||renderOverview)()}
-function renderOverview(){const o=state.data.overview||{},s=state.data.sales||{};return `<section class="cafe-primary-kpis">${kpi('Total sales',o.total_sales,'sales')}${kpi('Collections',o.total_collections,'collection')}${kpi('Expenses',o.expenses,'expense')}${kpi('Receivable',o.receivable,'receivable')}</section>
-<section class="cafe-mini-strip">${metric('Cash',money(o.cash_received))}${metric('UPI',money(o.upi_received))}${metric('Bills',o.bill_count||0)}${metric('Avg bill',money(o.average_bill))}</section>
-<section class="cafe-result-card"><div><span>Sales less recorded expenses</span><b>${money(o.sales_less_expenses)}</b><small>Operational indicator—not accounting net profit</small></div></section>
-<section class="cafe-breakdown-card"><header><h3>Sales mix</h3></header><div class="cafe-breakdown-row"><span>Counter sales</span><b>${money(o.counter_sales)}</b></div><div class="cafe-breakdown-row"><span>Credit sales</span><b>${money(o.credit_sales)}</b></div><div class="cafe-breakdown-row"><span>Customer collections</span><b>${money(o.customer_collections)}</b></div><div class="cafe-breakdown-row"><span>Quick amount sales</span><b>${money(s.counter_quick_sales)}</b></div></section>`}
+function renderOverview(){const o=state.data.overview||{},s=state.data.sales||{};return `<section class="cafe-primary-kpis">${kpi('Total sales',o.total_sales,'sales')}${kpi('Collections',o.total_collections,'collection')}${kpi('Expenses',o.expenses,'expense')}${kpi('Receivable',o.receivable,'receivable')}</section><section class="cafe-mini-strip">${metric('Cash',money(o.cash_received))}${metric('UPI',money(o.upi_received))}${metric('Bills',o.bill_count||0)}${metric('Avg bill',money(o.average_bill))}</section><section class="cafe-result-card"><div><span>Sales less recorded expenses</span><b>${money(o.sales_less_expenses)}</b><small>Operational indicator—not accounting net profit</small></div></section><section class="cafe-breakdown-card"><header><h3>Sales mix</h3></header><div class="cafe-breakdown-row"><span>Counter sales</span><b>${money(o.counter_sales)}</b></div><div class="cafe-breakdown-row"><span>Credit sales</span><b>${money(o.credit_sales)}</b></div><div class="cafe-breakdown-row"><span>Customer collections</span><b>${money(o.customer_collections)}</b></div><div class="cafe-breakdown-row"><span>Quick amount sales</span><b>${money(s.counter_quick_sales)}</b></div></section>`}
 function renderSales(){const s=state.data.sales||{},rows=state.data.sales_activity||[];return `<section class="cafe-primary-kpis">${kpi('Total sales',(s.counter_item_sales||0)+(s.counter_quick_sales||0)+(s.counter_adjustments||0)+(s.credit_sales||0),'sales')}${kpi('Counter sales',(s.counter_item_sales||0)+(s.counter_quick_sales||0)+(s.counter_adjustments||0))}${kpi('Credit sales',s.credit_sales)}${kpi('Quick sales',s.counter_quick_sales)}</section><section class="cafe-mini-strip">${metric('Counter bills',s.counter_bills||0)}${metric('Credit bills',s.credit_bills||0)}${metric('Cash',money(s.cash))}${metric('UPI',money(s.upi))}</section><section class="cafe-list-card"><header><h3>Sales transactions</h3></header>${rows.length?rows.map(activityRow).join(''):empty('No sales in this period')}</section>`}
 function renderCollections(){const c=state.data.collections||{};return `<section class="cafe-primary-kpis three">${kpi('Counter cash',c.counter_cash,'collection')}${kpi('Counter UPI',c.counter_upi,'collection')}${kpi('Customer payments',c.customer_collections,'collection')}</section><section class="cafe-notice"><b>Customer payment mode is not classified yet</b><span>Existing customer payments are included accurately in total collections, but Cash/UPI split is not guessed from free-text notes.</span></section><section class="cafe-result-card"><div><span>Total money received</span><b>${money((c.counter_cash||0)+(c.counter_upi||0)+(c.customer_collections||0))}</b><small>${Number(c.customer_collection_entries||0)} customer payment entries</small></div></section>`}
 function renderExpenses(){const e=state.data.expenses||{},rows=e.by_category||[];return `<section class="cafe-primary-kpis two">${kpi('Total expenses',e.total,'expense')}${kpi('Entries',0,'count').replace(money(0),Number(e.entries||0).toLocaleString('en-IN'))}</section><section class="cafe-list-card"><header><h3>Expense categories</h3></header>${rows.length?rows.map(x=>`<div class="cafe-ranking-row"><div><b>${safe(x.category)}</b><small>${Number(x.entries||0)} entries</small></div><strong>${money(x.amount)}</strong></div>`).join(''):empty('No expenses in this period')}</section><button class="cafe-open-tool" type="button" onclick="document.querySelector('#openExpense')?.click()">Open expense ledger</button>`}
