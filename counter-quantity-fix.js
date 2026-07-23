@@ -4,7 +4,7 @@ function selectedUnits(){
   let total=0;
   document.querySelectorAll('#counterCartList .counter-cart-row small').forEach(meta=>{
     const text=meta.textContent||'';
-    for(const match of text.matchAll(/[HF]\s*×\s*(\d+)/g)) total+=Number(match[1]||0);
+    for(const match of text.matchAll(/[HF]\s*×\s*(\d+)/g))total+=Number(match[1]||0);
   });
   return total;
 }
@@ -26,14 +26,13 @@ function repeatSelectedPortion(id,part,name){
   const previous=search.value;
   search.value=name;
   search.dispatchEvent(new Event('input',{bubbles:true}));
-  const button=document.querySelector(`#counterQuickMenuResults [data-quick-id="${CSS.escape(id)}"][data-quick-part="${part}"]`);
-  if(button){
-    button.click();
-  }
+  const escaped=window.CSS?.escape?CSS.escape(id):id.replace(/["\\]/g,'\\$&');
+  const button=document.querySelector(`#counterQuickMenuResults [data-quick-id="${escaped}"][data-quick-part="${part}"]`);
+  button?.click();
   search.value=previous;
   search.dispatchEvent(new Event('input',{bubbles:true}));
   search.blur();
-  syncCounterPickerTotals();
+  setTimeout(syncCounterPickerTotals,0);
 }
 
 function enhanceCounterCartRows(){
@@ -43,12 +42,15 @@ function enhanceCounterCartRows(){
     if(!controls||!id)return;
     const name=row.querySelector(':scope > div:first-child b')?.textContent?.trim()||'';
     const meta=row.querySelector(':scope > div:first-child small')?.textContent||'';
-    const amount=controls.querySelector('strong');
-    const remove=controls.querySelector('[data-action="remove"]');
-    controls.querySelectorAll('.counter-qty-plus').forEach(button=>button.remove());
     const portions=[];
     if(/H\s*×\s*\d+/.test(meta))portions.push(['half','+H','Increase half quantity']);
     if(/F\s*×\s*\d+/.test(meta))portions.push(['full','+F','Increase full quantity']);
+    const signature=`${id}:${portions.map(x=>x[0]).join(',')}`;
+    if(controls.dataset.qtySignature===signature)return;
+    controls.dataset.qtySignature=signature;
+    controls.querySelectorAll('.counter-qty-plus').forEach(button=>button.remove());
+    const amount=controls.querySelector('strong');
+    const remove=controls.querySelector('[data-action="remove"]');
     portions.forEach(([part,label,aria])=>{
       const button=document.createElement('button');
       button.type='button';
@@ -62,7 +64,7 @@ function enhanceCounterCartRows(){
   syncCounterPickerTotals();
 }
 
-const observer=new MutationObserver(()=>enhanceCounterCartRows());
+const observer=new MutationObserver(enhanceCounterCartRows);
 function start(){
   enhanceCounterCartRows();
   observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['open','class']});
