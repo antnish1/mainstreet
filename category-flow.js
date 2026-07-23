@@ -4,6 +4,7 @@ import './account-summary.js';
 import './opening-balance.js';
 import './role-access.js';
 import './menu-item-management.js';
+import './counter-sales.js';
 const categoryGrid=document.querySelector('#categoryGrid');
 const menuList=document.querySelector('#menuItemList');
 const itemDialog=document.querySelector('#itemDialog');
