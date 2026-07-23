@@ -7,6 +7,7 @@ import './menu-item-management.js';
 import './counter-sales.js';
 import './counter-quantity-fix.js';
 import './cafe-reporting.js';
+import './workspace-redesign.js';
 const categoryGrid=document.querySelector('#categoryGrid');
 const menuList=document.querySelector('#menuItemList');
 const itemDialog=document.querySelector('#itemDialog');
